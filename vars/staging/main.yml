@@ -1,0 +1,5 @@
+# The domain name for this application
+app_domain: "staging.textreview.org"
+
+ALLOWED_ORIGINS: "https://staging.textreview.de"
+LOG_LEVEL: "debug"

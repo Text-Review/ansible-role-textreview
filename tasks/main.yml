@@ -1,0 +1,48 @@
+---
+- name: "1. Log in to GitHub Container Registry"
+  containers.podman.podman_login:
+    registry: ghcr.io
+    username: "{{ GITHUB_USERNAME }}"
+    password: "{{ GITHUB_TOKEN }}"
+  become: yes
+  become_user: "{{ deployer_user_name }}"
+  tags:
+    - podman-login
+
+- name: "2. Load environment-specific variables"
+  # This task includes variables from the correct directory (e.g., vars/production/)
+  # based on the 'env' variable passed to the playbook.
+  include_vars:
+    dir: "{{ role_path }}/vars/{{ env }}"
+
+- name: "3. Create directory for {{ app_name }} ({{ env }})"
+  file:
+    path: "/opt/{{ app_name }}/{{ env }}"
+    state: directory
+    mode: '0755'
+
+- name: "4. Deploy .env file from template"
+  template:
+    src: .env.j2
+    dest: "/opt/{{ app_name }}/{{ env }}/.env"
+    mode: '0600'
+
+- name: "5. Deploy docker-compose file for {{ app_name }} ({{ env }})"
+  template:
+    src: docker-compose.yml.j2
+    dest: "/opt/{{ app_name }}/{{ env }}/docker-compose.yml"
+
+- name: "6. Ensure correct ownership for {{ app_name }} directory"
+  ansible.builtin.file:
+    path: "/opt/{{ app_name }}/{{ env }}"
+    owner: "{{ deployer_user_name }}"
+    group: "{{ deployer_user_name }}"
+    recurse: yes
+
+- name: "7. Start {{ app_name }} container with podman-compose"
+  ansible.builtin.command:
+    cmd: podman-compose -f docker-compose.yml up -d --force-recreate
+    chdir: "/opt/{{ app_name }}/{{ env }}"
+  changed_when: true
+  become: true
+  become_user: "{{ deployer_user_name }}"

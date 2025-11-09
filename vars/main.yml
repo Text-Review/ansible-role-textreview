@@ -1,0 +1,9 @@
+# Variables specific to the Text-Review application
+app_name: "textreview"
+
+# The full name of your Docker image from GitHub Container Registry
+app_image_name: "ghcr.io/text-review/text-review"
+app_image: "{{ app_image_name }}:{{ image_tag | default('latest') }}"
+
+# The port the application is listening on *inside* the container
+app_internal_port: 3000

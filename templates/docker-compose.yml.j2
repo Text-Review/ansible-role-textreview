@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  {{ app_name }}:
+    image: "{{ app_image }}"
+    container_name: "{{ app_name }}-{{ env }}"
+    pull_policy: always
+    restart: always
+    networks:
+      - web
+    labels:
+      # --- Traefik Labels ---
+      - "traefik.enable=true"
+{% if env == 'production' %}
+      # Production: www and non-www
+      - "traefik.http.routers.{{ app_name }}-{{ env }}.rule=Host(`{{ app_domain }}`) || Host(`www.{{ app_domain }}`)"
+      # Production: Redirect www to non-www
+      - "traefik.http.middlewares.{{ app_name }}-{{ env }}-redirect.redirectregex.regex=^https://www.{{ app_domain }}(.*)"
+      - "traefik.http.middlewares.{{ app_name }}-{{ env }}-redirect.redirectregex.replacement=https://{{ app_domain }}$$1"
+      - "traefik.http.middlewares.{{ app_name }}-{{ env }}-redirect.redirectregex.permanent=true"
+      - "traefik.http.routers.{{ app_name }}-{{ env }}.middlewares={{ app_name }}-{{ env }}-redirect"
+{% else %}
+      # Staging: Only the main domain
+      - "traefik.http.routers.{{ app_name }}-{{ env }}.rule=Host(`{{ app_domain }}`)"
+{% endif %}
+      - "traefik.http.routers.{{ app_name }}-{{ env }}.entrypoints=websecure"
+      - "traefik.http.routers.{{ app_name }}-{{ env }}.tls.certresolver=letsencrypt"
+      - "traefik.http.services.{{ app_name }}-{{ env }}.loadbalancer.server.port={{ app_internal_port }}"
+
+networks:
+  web:
+    external: true
