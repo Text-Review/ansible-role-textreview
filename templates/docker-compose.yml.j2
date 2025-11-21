@@ -29,6 +29,18 @@ services:
     depends_on:
       - db
 
+  migrate:
+    image: "{{ app_image }}"
+    container_name: "{{ app_name }}-{{ env }}-migrate"
+    command: npx prisma migrate deploy
+    environment:
+      DATABASE_URL: "{{ DB_URL }}"
+    depends_on:
+      - db
+    networks:
+      - web
+    restart: "no"
+
   db:
     image: "{{ DB_IMAGE }}"
     container_name: "{{ DB_HOST }}"
