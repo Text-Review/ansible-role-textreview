@@ -6,6 +6,11 @@ services:
     container_name: "{{ app_name }}-{{ env }}"
     pull_policy: always
     restart: always
+    environment:
+      DATABASE_URL: "{{ DB_URL }}"
+    depends_on:
+      - db
+      - migrate
     networks:
       - web
     labels:
@@ -26,8 +31,6 @@ services:
       - "traefik.http.routers.{{ app_name }}-{{ env }}.entrypoints=websecure"
       - "traefik.http.routers.{{ app_name }}-{{ env }}.tls.certresolver=letsencrypt"
       - "traefik.http.services.{{ app_name }}-{{ env }}.loadbalancer.server.port={{ app_internal_port }}"
-    depends_on:
-      - db
 
   migrate:
     image: "{{ app_image }}"
@@ -35,6 +38,7 @@ services:
     command: npx prisma migrate deploy
     environment:
       DATABASE_URL: "{{ DB_URL }}"
+      NPM_CONFIG_CACHE: "/tmp/.npm"
     depends_on:
       - db
     networks:
