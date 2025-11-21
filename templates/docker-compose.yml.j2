@@ -9,8 +9,10 @@ services:
     environment:
       DATABASE_URL: "{{ DB_URL }}"
     depends_on:
-      - db
-      - migrate
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     networks:
       - web
     labels:
@@ -35,12 +37,13 @@ services:
   migrate:
     image: "{{ app_image }}"
     container_name: "{{ app_name }}-{{ env }}-migrate"
-    command: npx prisma migrate deploy
+    command: /app/node_modules/.bin/prisma migrate deploy
     environment:
       DATABASE_URL: "{{ DB_URL }}"
       NPM_CONFIG_CACHE: "/tmp/.npm"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
       - web
     restart: "no"
@@ -53,6 +56,11 @@ services:
       POSTGRES_USER: "{{ DB_USER }}"
       POSTGRES_PASSWORD: "{{ DB_PASSWORD }}"
       POSTGRES_DB: "{{ DB_NAME }}"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U {{ db_user }} -d {{ db_name }}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     volumes:
       - db_data:/var/lib/postgresql/data
     networks:
