@@ -1,6 +1,6 @@
-db_image: "postgres:18-alpine"
-db_user: "textreview"
-db_name: "textreview"
+DB_IMAGE: "postgres:18-alpine"
+DB_USER: "textreview"
+DB_NAME: "textreview"
 
-db_host: "{{ app_name }}-{{ env }}-db"
-db_url: "postgres://{{ db_user }}:{{ db_password }}@{{ db_host }}:5432/{{ db_name }}"
+DB_HOST: "{{ app_name }}-{{ env }}-db"
+DB_URL: "postgres://{{ DB_USER }}:{{ DB_PASSWORD }}@{{ DB_HOST }}:5432/{{ DB_NAME }}"

@@ -30,13 +30,13 @@ services:
       - db
 
   db:
-    image: "{{ db_image }}"
-    container_name: "{{ db_host }}"
+    image: "{{ DB_IMAGE }}"
+    container_name: "{{ DB_HOST }}"
     restart: always
     environment:
-      POSTGRES_USER: "{{ db_user }}"
-      POSTGRES_PASSWORD: "{{ db_password }}"
-      POSTGRES_DB: "{{ db_name }}"
+      POSTGRES_USER: "{{ DB_USER }}"
+      POSTGRES_PASSWORD: "{{ DB_PASSWORD }}"
+      POSTGRES_DB: "{{ DB_NAME }}"
     volumes:
       - db_data:/var/lib/postgresql/data
     networks:
