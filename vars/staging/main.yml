@@ -3,3 +3,5 @@ app_domain: "staging.textreview.org"
 
 ALLOWED_ORIGINS: "https://staging.textreview.de"
 LOG_LEVEL: "debug"
+
+DB_HEALTHCHECK_INTERVAL: "60s"
