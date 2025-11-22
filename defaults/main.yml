@@ -1,4 +1,4 @@
-DB_IMAGE: "postgres:18-alpine"
+DB_IMAGE: "docker.io/library/postgres:18-alpine"
 DB_USER: "textreview"
 DB_NAME: "textreview"
 
