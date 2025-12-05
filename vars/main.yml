@@ -1,9 +1,14 @@
-# Variables specific to the Text-Review application
-app_name: "textreview"
+# --- Global ---
+product_name: "textreview"
 
-# The full name of your Docker image from GitHub Container Registry
-app_image_name: "ghcr.io/text-review/text-review"
-app_image: "{{ app_image_name }}:{{ image_tag | default('latest') }}"
+# --- Frontend (Next.js) ---
+frontend_name: "textreview-web"
+frontend_image_name: "ghcr.io/text-review/text-review"
+frontend_image: "{{ frontend_image_name }}:{{ image_tag | default('latest') }}"
+frontend_port: 3000
 
-# The port the application is listening on *inside* the container
-app_internal_port: 3000
+# --- Backend (ASP.NET Core) ---
+backend_name: "textreview-backend"
+backend_image_name: "ghcr.io/text-review/text-review-backend"
+backend_image: "{{ backend_image_name }}:{{ image_tag | default('latest') }}"
+backend_port: 8080

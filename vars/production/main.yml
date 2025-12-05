@@ -1,5 +1,5 @@
 # The domain name for this application
-app_domain: "textreview.org"
+product_domain: "textreview.org"
 
-ALLOWED_ORIGINS: "https://textreview.org"
-LOG_LEVEL: "info"
+allowed_origins: "https://textreview.org"
+log_level: "info"

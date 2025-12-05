@@ -1,18 +1,33 @@
 version: '3.8'
 
 services:
-  {{ app_name }}:
-    image: "{{ app_image }}"
-    container_name: "{{ app_name }}-{{ env }}"
+
+  # --- FRONTEND (Next.js) ---
+  {{ frontend_name }}:
+    image: "{{ frontend_image }}"
+    container_name: "{{ frontend_name }}-{{ env }}"
     pull_policy: always
     restart: always
     environment:
-      DATABASE_URL: "{{ DB_URL }}"
+
+      # --- Database (tb deleted) ---
+      DATABASE_URL: "${DATABASE_URL}"
+
+      # --- Shared ---
+      LOG_LEVEL: "${LOG_LEVEL}"
+
+      # --- Loki ---
+      LOKI_HOST: "${LOKI_HOST}"
+      LOKI_USERNAME: "${LOKI_USERNAME}"
+      LOKI_API_KEY: "${LOKI_API_KEY}"
+
+      # --- API Connection ---
+      NEXT_PUBLIC_API_URL: "http://{{ backend_name }}-{{ env }}:{{ backend_port }}/graphql"
     depends_on:
       db:
         condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
+      #migrate:
+      #  condition: service_completed_successfully
     networks:
       - web
     labels:
@@ -20,47 +35,89 @@ services:
       - "traefik.enable=true"
 {% if env == 'production' %}
       # Production: www and non-www
-      - "traefik.http.routers.{{ app_name }}-{{ env }}.rule=Host(`{{ app_domain }}`) || Host(`www.{{ app_domain }}`)"
+      - "traefik.http.routers.{{ frontend_name }}-{{ env }}.rule=Host(`{{ product_domain }}`) || Host(`www.{{ product_domain }}`)"
       # Production: Redirect www to non-www
-      - "traefik.http.middlewares.{{ app_name }}-{{ env }}-redirect.redirectregex.regex=^https://www.{{ app_domain }}(.*)"
-      - "traefik.http.middlewares.{{ app_name }}-{{ env }}-redirect.redirectregex.replacement=https://{{ app_domain }}$$1"
-      - "traefik.http.middlewares.{{ app_name }}-{{ env }}-redirect.redirectregex.permanent=true"
-      - "traefik.http.routers.{{ app_name }}-{{ env }}.middlewares={{ app_name }}-{{ env }}-redirect"
+      - "traefik.http.middlewares.{{ frontend_name }}-{{ env }}-redirect.redirectregex.regex=^https://www.{{ product_domain }}(.*)"
+      - "traefik.http.middlewares.{{ frontend_name }}-{{ env }}-redirect.redirectregex.replacement=https://{{ product_domain }}$$1"
+      - "traefik.http.middlewares.{{ frontend_name }}-{{ env }}-redirect.redirectregex.permanent=true"
+      - "traefik.http.routers.{{ frontend_name }}-{{ env }}.middlewares={{ frontend_name }}-{{ env }}-redirect"
 {% else %}
       # Staging: Only the main domain
-      - "traefik.http.routers.{{ app_name }}-{{ env }}.rule=Host(`{{ app_domain }}`)"
+      - "traefik.http.routers.{{ frontend_name }}-{{ env }}.rule=Host(`{{ product_domain }}`)"
 {% endif %}
-      - "traefik.http.routers.{{ app_name }}-{{ env }}.entrypoints=websecure"
-      - "traefik.http.routers.{{ app_name }}-{{ env }}.tls.certresolver=letsencrypt"
-      - "traefik.http.services.{{ app_name }}-{{ env }}.loadbalancer.server.port={{ app_internal_port }}"
+      - "traefik.http.routers.{{ frontend_name }}-{{ env }}.entrypoints=websecure"
+      - "traefik.http.routers.{{ frontend_name }}-{{ env }}.tls.certresolver=letsencrypt"
+      - "traefik.http.services.{{ frontend_name }}-{{ env }}.loadbalancer.server.port={{ frontend_port }}"
 
-  migrate:
-    image: "{{ app_image }}"
-    container_name: "{{ app_name }}-{{ env }}-migrate"
-    command: npx prisma@6.19.0 migrate deploy
+  # --- BACKEND (ASP.NET Core) ---
+  {{ backend_name }}:
+    image: "{{ backend_image }}"
+    container_name: "{{ backend_name }}-{{ env }}"
+    pull_policy: always
+    restart: always
     environment:
-      DATABASE_URL: "{{ DB_URL }}"
-      NPM_CONFIG_CACHE: "/tmp/.npm"
+
+      # --- .NET Config ---
+      ALLOWED_ORIGINS: "${ALLOWED_ORIGINS}"
+      ASPNETCORE_ENVIRONMENT: "Production"
+      ASPNETCORE_URLS: "http://+:{{ backend_port }}"
+
+      # --- Auth ---
+      Auth__Google__ClientId: "${AUTH_GOOGLE_ID}"
+      Auth__Google__ClientSecret: "${AUTH_GOOGLE_SECRET}"
+      Auth__Secret: "${AUTH_SECRET}"
+
+      # --- Database ---
+      ConnectionStrings__DefaultConnection: "${DATABASE_URL}"
+
+      # --- Shared ---
+      LOG_LEVEL: "${LOG_LEVEL}"
+
+      # --- Loki ---
+      LOKI_HOST: "${LOKI_HOST}"
+      LOKI_USERNAME: "${LOKI_USERNAME}"
+      LOKI_API_KEY: "${LOKI_API_KEY}"
     depends_on:
       db:
         condition: service_healthy
     networks:
       - web
-    restart: "no"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.{{ backend_name }}-{{ env }}.rule=Host(`{{ product_domain }}`) && (PathPrefix(`/graphql`) || PathPrefix(`/health`))"
+      - "traefik.http.routers.{{ backend_name }}-{{ env }}.entrypoints=websecure"
+      - "traefik.http.routers.{{ backend_name }}-{{ env }}.tls.certresolver=letsencrypt"
+      - "traefik.http.services.{{ backend_name }}-{{ env }}.loadbalancer.server.port={{ backend_port }}"
 
+  # --- MIGRATION (Prisma / Frontend) ---
+  #migrate:
+  #  image: "{{ frontend_image }}"
+  #  container_name: "{{ product_name }}-{{ env }}-migrate"
+  #  command: npx prisma@6.19.0 migrate deploy
+  #  environment:
+  #    DATABASE_URL: "${DATABASE_URL}"
+  #    NPM_CONFIG_CACHE: "/tmp/.npm"
+  #  depends_on:
+  #    db:
+  #      condition: service_healthy
+  #  networks:
+  #    - web
+  #  restart: "no"
+
+  # --- DATABASE ---
   db:
-    image: "{{ DB_IMAGE }}"
-    container_name: "{{ DB_HOST }}"
+    image: "{{ db_image }}"
+    container_name: "{{ db_host }}"
     restart: always
     environment:
-      POSTGRES_USER: "{{ DB_USER }}"
-      POSTGRES_PASSWORD: "{{ DB_PASSWORD }}"
-      POSTGRES_DB: "{{ DB_NAME }}"
+      POSTGRES_USER: "{{ db_user }}"
+      POSTGRES_PASSWORD: "{{ db_password }}"
+      POSTGRES_DB: "{{ db_name }}"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U {{ DB_USER }} -d {{ DB_NAME }}"]
-      interval: {{ DB_HEALTHCHECK_INTERVAL }}
-      timeout: {{ DB_HEALTHCHECK_TIMEOUT }}
-      retries: {{ DB_HEALTHCHECK_RETRIES }}
+      test: ["CMD-SHELL", "pg_isready -U {{ db_user }} -d {{ db_name }}"]
+      interval: {{ db_healthcheck_interval }}
+      timeout: {{ db_healthcheck_timeout }}
+      retries: {{ db_healthcheck_retries }}
     volumes:
       - db_data:/var/lib/postgresql/data
     networks:
@@ -72,4 +129,4 @@ networks:
 
 volumes:
   db_data:
-    name: "{{ app_name }}-{{ env }}-db-data"
+    name: "{{ product_name }}-{{ env }}-db-data"

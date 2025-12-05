@@ -1,7 +1,7 @@
 # The domain name for this application
-app_domain: "staging.textreview.org"
+product_domain: "staging.textreview.org"
 
-ALLOWED_ORIGINS: "https://staging.textreview.de"
-LOG_LEVEL: "debug"
+allowed_origins: "https://staging.textreview.de"
+log_level: "debug"
 
-DB_HEALTHCHECK_INTERVAL: "60s"
+db_healthcheck_interval: "60s"
