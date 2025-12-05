@@ -1,0 +1,22 @@
+[Unit]
+Description=TextReview PostgreSQL Database ({{ env }})
+After=network-online.target
+
+[Container]
+Image={{ db_image }}
+ContainerName={{ db_host }}
+Network=textreview.network
+# Environment variables for Postgres
+Environment=POSTGRES_USER={{ db_user }}
+Environment=POSTGRES_PASSWORD={{ db_password }}
+Environment=POSTGRES_DB={{ db_name }}
+# Data persistence
+Volume={{ product_name }}-{{ env }}-db-data:/var/lib/postgresql/data
+# Health check (important for backend startup)
+HealthCmd=pg_isready -U {{ db_user }} -d {{ db_name }}
+HealthInterval={{ db_healthcheck_interval }}
+HealthTimeout={{ db_healthcheck_timeout }}
+HealthRetries={{ db_healthcheck_retries }}
+
+[Service]
+Restart=always

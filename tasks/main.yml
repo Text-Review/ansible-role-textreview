@@ -6,43 +6,53 @@
     password: "{{ GITHUB_TOKEN }}"
   become: yes
   become_user: "{{ deployer_user_name }}"
-  tags:
-    - podman-login
+  tags: [always]
 
 - name: "2. Load environment-specific variables"
   # This task includes variables from the correct directory (e.g., vars/production/)
   # based on the 'env' variable passed to the playbook.
   include_vars:
     dir: "{{ role_path }}/vars/{{ env }}"
+  tags: [always]
 
-- name: "3. Create directory for {{ app_name }} ({{ env }})"
+- name: "3. Ensure application directory exists in /opt"
   file:
     path: "/opt/{{ app_name }}/{{ env }}"
     state: directory
-    mode: '0755'
+    # IMPORTANT: The deployer user needs permissions here, otherwise
+    # the container cannot read the environment file
+    owner: "{{ deployer_user_name }}"
+    group: "{{ deployer_user_name }}"
+    mode: '0750'
 
-- name: "4. Deploy .env file from template"
+- name: "4. Deploy .env file to /opt"
   template:
     src: .env.j2
     dest: "/opt/{{ app_name }}/{{ env }}/.env"
-    mode: '0600'
-
-- name: "5. Deploy docker-compose file for {{ app_name }} ({{ env }})"
-  template:
-    src: docker-compose.yml.j2
-    dest: "/opt/{{ app_name }}/{{ env }}/docker-compose.yml"
-
-- name: "6. Ensure correct ownership for {{ app_name }} directory"
-  ansible.builtin.file:
-    path: "/opt/{{ app_name }}/{{ env }}"
     owner: "{{ deployer_user_name }}"
     group: "{{ deployer_user_name }}"
+    mode: '0600'
+  notify: Restart Backend
+
+- name: "5. Ensure Systemd Quadlet directory exists (User Home)"
+  # These files MUST be placed in Home so that Systemd can find them ‘rootless’.
+  file:
+    path: "/home/{{ deployer_user_name }}/.config/containers/systemd/"
+    state: directory
+    owner: "{{ deployer_user_name }}"
+    group: "{{ deployer_user_name }}"
+    mode: '0755'
     recurse: yes
 
-- name: "7. Start {{ app_name }} container with podman-compose"
-  ansible.builtin.command:
-    cmd: podman-compose -f docker-compose.yml up -d --force-recreate
-    chdir: "/opt/{{ app_name }}/{{ env }}"
-  changed_when: true
-  become: true
-  become_user: "{{ deployer_user_name }}"
+- name: "6. Deploy Quadlet definitions"
+  template:
+    src: "quadlets/{{ item.src }}"
+    dest: "/home/{{ deployer_user_name }}/.config/containers/systemd/{{ item.dest }}"
+    owner: "{{ deployer_user_name }}"
+    group: "{{ deployer_user_name }}"
+    mode: '0644'
+  loop:
+    - { src: 'textreview.network', dest: 'textreview.network' }
+    - { src: 'textreview-db.container.j2', dest: 'textreview-db.container' }
+    - { src: 'textreview-backend.container.j2', dest: 'textreview-backend.container' }
+  notify: Reload Systemd

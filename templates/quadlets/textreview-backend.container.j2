@@ -1,0 +1,28 @@
+[Unit]
+Description=TextReview Backend ({{ env }})
+# Only starts when the database is “healthy”
+After=textreview-db.service
+
+[Container]
+Image={{ backend_image }}
+ContainerName={{ backend_name }}-{{ env }}
+Network=textreview.network
+
+# Loads the configuration (connection strings, etc.)
+EnvironmentFile=/opt/{{ app_name }}/{{ env }}/.env
+
+# Deployment logic: Allow auto-update when new image is in registry
+Label=io.containers.autoupdate=registry
+
+# --- Traefik configuration (replaces labels from docker-compose) ---
+Label=traefik.enable=true
+# Router: Listens for domain AND path /graphql or /health
+Label=traefik.http.routers.{{ backend_name }}-{{ env }}.rule=Host(`{{ product_domain }}`) && (PathPrefix(`/graphql`) || PathPrefix(`/health`))
+Label=traefik.http.routers.{{ backend_name }}-{{ env }}.entrypoints=websecure
+Label=traefik.http.routers.{{ backend_name }}-{{ env }}.tls.certresolver=letsencrypt
+Label=traefik.http.services.{{ backend_name }}-{{ env }}.loadbalancer.server.port={{ backend_port }}
+
+[Service]
+Restart=always
+# ALWAYS pulls the image before starting (crucial for CD)
+ExecStartPre=/usr/bin/podman image pull {{ backend_image }}
