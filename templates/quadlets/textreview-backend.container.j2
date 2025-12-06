@@ -9,7 +9,7 @@ ContainerName={{ backend_name }}-{{ env }}
 Network=textreview.network
 
 # Loads the configuration (connection strings, etc.)
-EnvironmentFile=/opt/{{ app_name }}/{{ env }}/.env
+EnvironmentFile=/opt/{{ product_name }}/{{ env }}/.env
 
 # Deployment logic: Allow auto-update when new image is in registry
 Label=io.containers.autoupdate=registry

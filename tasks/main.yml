@@ -2,8 +2,8 @@
 - name: "1. Log in to GitHub Container Registry"
   containers.podman.podman_login:
     registry: ghcr.io
-    username: "{{ GITHUB_USERNAME }}"
-    password: "{{ GITHUB_TOKEN }}"
+    username: "{{ github_username }}"
+    password: "{{ github_token }}"
   become: yes
   become_user: "{{ deployer_user_name }}"
   tags: [always]
@@ -17,7 +17,7 @@
 
 - name: "3. Ensure application directory exists in /opt"
   file:
-    path: "/opt/{{ app_name }}/{{ env }}"
+    path: "/opt/{{ product_name }}/{{ env }}"
     state: directory
     # IMPORTANT: The deployer user needs permissions here, otherwise
     # the container cannot read the environment file
@@ -28,7 +28,7 @@
 - name: "4. Deploy .env file to /opt"
   template:
     src: .env.j2
-    dest: "/opt/{{ app_name }}/{{ env }}/.env"
+    dest: "/opt/{{ product_name }}/{{ env }}/.env"
     owner: "{{ deployer_user_name }}"
     group: "{{ deployer_user_name }}"
     mode: '0600'
