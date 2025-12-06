@@ -1,3 +1,14 @@
-#SPDX-License-Identifier: MIT-0
----
-# handlers file for text_review
+- name: Reload Systemd
+  ansible.builtin.systemd:
+    scope: user
+    daemon_reload: yes
+  become: yes
+  become_user: "{{ deployer_user_name }}"
+
+- name: Restart Backend
+  ansible.builtin.systemd:
+    scope: user
+    name: textreview-backend
+    state: restarted
+  become: yes
+  become_user: "{{ deployer_user_name }}"
